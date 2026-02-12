@@ -30,7 +30,7 @@ public class S3StorageServiceImpl implements S3StorageService {
     @Override
     public S3UploadResult upload(File file, String source) {
         String objectKey = generateObjectKey(file.getName(), source);
-        
+
         // 1. Detect the REAL content type using your helper method
         String contentType = detectContentType(file.getName());
 
@@ -45,7 +45,7 @@ public class S3StorageServiceImpl implements S3StorageService {
 
             // 2. Return the correct content type in the result
             return new S3UploadResult(bucket, objectKey, file.length(), contentType);
-            
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to upload to S3: " + e.getMessage(), e);
         }

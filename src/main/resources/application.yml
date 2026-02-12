@@ -27,7 +27,7 @@ spring:
   datasource:
     url: jdbc:postgresql://yamanote.proxy.rlwy.net:32531/railway
     username: postgres
-    password: UytPqBrbHeLUDjGsQomYWmATHWqyxjjZ
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -43,5 +43,5 @@ aws:
     region: ap-south-1
     bucket: caizin-recruitment-resumes
     base-folder: resumes
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}

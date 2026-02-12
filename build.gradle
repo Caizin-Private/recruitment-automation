@@ -38,6 +38,10 @@ dependencies {
     implementation 'com.azure:azure-identity:1.11.1'
     implementation 'io.projectreactor:reactor-core:3.6.5'
 
+    implementation 'org.apache.tika:tika-core:2.9.0'
+    implementation 'org.apache.tika:tika-parsers-standard-package:2.9.0'
+
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 

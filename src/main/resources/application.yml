@@ -21,3 +21,10 @@ spring:
             user-info-uri: https://graph.microsoft.com/oidc/userinfo
             jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
             user-name-attribute: sub
+aws:
+  s3:
+    region: ap-south-1
+    bucket: caizin-recruitment-resumes
+    base-folder: resumes
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}

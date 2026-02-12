@@ -21,6 +21,23 @@ spring:
             user-info-uri: https://graph.microsoft.com/oidc/userinfo
             jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
             user-name-attribute: sub
+  application:
+    name: recruitment-automation
+
+  datasource:
+    url: jdbc:postgresql://yamanote.proxy.rlwy.net:32531/railway
+    username: postgres
+    password: UytPqBrbHeLUDjGsQomYWmATHWqyxjjZ
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 aws:
   s3:
     region: ap-south-1

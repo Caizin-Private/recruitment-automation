@@ -12,6 +12,7 @@ public class ResumeTextExtractor {
 
     public String extractText(File file) {
         try {
+//            System.out.println(tika.parseToString(file));
             return tika.parseToString(file);
         } catch (Exception e) {
             throw new RuntimeException("Failed to extract resume text", e);

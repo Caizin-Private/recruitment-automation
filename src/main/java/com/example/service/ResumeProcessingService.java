@@ -31,17 +31,13 @@ public class ResumeProcessingService {
 
     public void process(File file) {
 
-        // 1️⃣ Extract text
         String text = extractor.extractText(file);
 
-        // 2️⃣ Parse name & email
         ParsedResume parsed = parser.parse(text);
 
-        // 3️⃣ Upload original resume to S3
         S3UploadResult uploadResult =
                 s3Service.upload(file, "EMAIL");
 
-        // 4️⃣ Persist metadata
         Candidate candidate = new Candidate();
         candidate.setFullName(parsed.fullName());
         candidate.setEmail(parsed.email());
@@ -52,7 +48,5 @@ public class ResumeProcessingService {
 
         repository.save(candidate);
 
-        // 5️⃣ Cleanup
-        file.delete();
     }
 }

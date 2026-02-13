@@ -64,9 +64,9 @@ public class GraphMailService {
             GraphServiceClient graphClient = new GraphServiceClient(credential);
 
             // STEP 4: Ensure resumes folder exists
-            File folder = new File("resumes");
-            if (!folder.exists())
-                folder.mkdirs();
+            File tempDir = new File("resumes");
+            if (!tempDir.exists())
+                tempDir.mkdirs();
 
             // STEP 5: Fetch only UNREAD emails
             var messages = graphClient
@@ -150,7 +150,6 @@ public class GraphMailService {
                                         .get();
 
                         if (fullAttachment instanceof FileAttachment fullFileAttachment) {
-
                             content = fullFileAttachment.getContentBytes();
                         }
                     }
@@ -160,22 +159,34 @@ public class GraphMailService {
                         continue;
                     }
 
-                    // STEP 9: Save file
-                    File file = new File(folder, fileName);
+                    // STEP 9: Write temp file (UPDATED)
+                    File tempFile = new File(tempDir, fileName);
+                    boolean success = false;
 
-                    try (OutputStream os = new FileOutputStream(file)) {
+                    try (OutputStream os = new FileOutputStream(tempFile)) {
                         os.write(content);
+
+                        // STEP 10: Process resume
+                        resumeProcessingService.process(tempFile);
+                        success = true;
+                        resumeDownloaded = true;
+
+                    } catch (Exception e) {
+
+                        System.out.println(
+                                "Resume processing failed for: " + fileName
+                        );
+                        e.printStackTrace();
+
+                    } finally {
+                        // STEP 11: Delete ONLY after success
+                        if (success && tempFile.exists()) {
+                            tempFile.delete();
+                        }
                     }
-
-                    System.out.println("Downloaded resume: " + fileName);
-
-                    // STEP 10: Process resume
-                    resumeProcessingService.process(file);
-
-                    resumeDownloaded = true;
                 }
 
-                // STEP 11: Mark email as READ only if resume downloaded
+                // STEP 12: Mark email as READ only if resume downloaded
                 if (resumeDownloaded) {
 
                     Message updateMessage = new Message();
@@ -190,7 +201,6 @@ public class GraphMailService {
                     System.out.println("Marked email as READ: " + subject);
                 }
                 else {
-
                     System.out.println("No PDF resumes found in email.");
                 }
             }

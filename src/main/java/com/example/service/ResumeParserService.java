@@ -24,10 +24,6 @@ public class ResumeParserService {
         return matcher.find() ? matcher.group() : "unknown@email.com";
     }
 
-    /**
-     * Simple heuristic:
-     * First meaningful line is treated as name
-     */
     private String extractName(String text) {
         return text.lines()
                 .map(String::trim)

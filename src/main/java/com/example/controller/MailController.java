@@ -16,7 +16,7 @@ public class MailController {
 
     @GetMapping("/emails")
     public String getEmails(OAuth2AuthenticationToken authentication) {
-        service.fetchEmailsAndDownloadResumes(authentication);
+        service.fetchUnreadEmailsAndDownloadResumes(authentication);
         return "Check console for emails";
     }
 }

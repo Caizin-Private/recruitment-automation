@@ -2,7 +2,6 @@ package com.example.service;
 
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenCredential;
-import com.azure.core.credential.TokenRequestContext;
 import com.microsoft.graph.models.Attachment;
 import com.microsoft.graph.models.FileAttachment;
 import com.microsoft.graph.models.Message;
@@ -17,7 +16,6 @@ import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.time.OffsetDateTime;
 
 @Service
@@ -26,16 +24,27 @@ public class GraphMailService {
     private final OAuth2AuthorizedClientService clientService;
     private final ResumeProcessingService resumeProcessingService;
 
-    public GraphMailService(OAuth2AuthorizedClientService clientService,ResumeProcessingService resumeProcessingService) {
+    // IMPORTANT: absolute path
+    private static final String RESUME_DIR =
+            "/Users/nikhilnegi/Desktop/recruitment-automation/resumes";
+
+    public GraphMailService(
+            OAuth2AuthorizedClientService clientService,
+            ResumeProcessingService resumeProcessingService
+    ) {
         this.clientService = clientService;
         this.resumeProcessingService = resumeProcessingService;
     }
 
-    public void fetchEmailsAndDownloadResumes(OAuth2AuthenticationToken authentication) {
+    public void fetchUnreadEmailsAndDownloadResumes(
+            OAuth2AuthenticationToken authentication) {
 
         try {
 
-            // 1. Get authorized client
+            System.out.println("Working directory: "
+                    + System.getProperty("user.dir"));
+
+            // STEP 1: Load OAuth client
             OAuth2AuthorizedClient client =
                     clientService.loadAuthorizedClient(
                             authentication.getAuthorizedClientRegistrationId(),
@@ -43,64 +52,76 @@ public class GraphMailService {
                     );
 
             if (client == null) {
-                System.out.println("Client is null");
+                System.out.println("OAuth client is NULL");
                 return;
             }
 
-            String accessToken = client.getAccessToken().getTokenValue();
+            String accessToken =
+                    client.getAccessToken().getTokenValue();
 
-            // 2. Create TokenCredential (CORRECT for SDK v6)
-            TokenCredential credential = new TokenCredential() {
-                @Override
-                public Mono<AccessToken> getToken(TokenRequestContext request) {
+            // STEP 2: Create credential
+            TokenCredential credential = request ->
+                    Mono.just(new AccessToken(
+                            accessToken,
+                            OffsetDateTime.now().plusHours(1)
+                    ));
 
-                    return Mono.just(
-                            new AccessToken(
-                                    accessToken,
-                                    OffsetDateTime.now().plusHours(1)
-                            )
-                    );
-                }
-            };
+            // STEP 3: Create Graph client
+            GraphServiceClient graphClient =
+                    new GraphServiceClient(credential);
 
-            // 3. Create Graph client
-            GraphServiceClient graphClient = new GraphServiceClient(credential);
+            // STEP 4: Ensure folder exists
+            File folder = new File(RESUME_DIR);
 
-            // 4. Create resumes folder if not exists
-            File folder = new File("resumes");
             if (!folder.exists()) {
-                folder.mkdir();
+
+                boolean created = folder.mkdirs();
+
+                System.out.println("Folder created: " + created);
             }
 
-            // 5. Fetch emails
+            System.out.println("Saving resumes to: "
+                    + folder.getAbsolutePath());
+
+            // STEP 5: Fetch unread emails
             var messages = graphClient
                     .me()
                     .messages()
-                    .get();
+                    .get(config -> {
 
-            if (messages == null || messages.getValue() == null) {
-                System.out.println("No messages found");
+                        config.queryParameters.filter =
+                                "isRead eq false";
+
+                        config.queryParameters.top = 50;
+                    });
+
+            if (messages == null ||
+                    messages.getValue() == null) {
+
+                System.out.println("No unread emails");
+
                 return;
             }
 
-            // 6. Loop emails
+            // STEP 6: Process each email
             for (Message message : messages.getValue()) {
-
-                System.out.println("Checking email: " + message.getSubject());
-
-                Boolean hasAttachments = message.getHasAttachments();
-
-                if (hasAttachments == null || !hasAttachments) {
-                    continue;
-                }
 
                 String messageId = message.getId();
 
-                if (messageId == null) {
+                System.out.println("\nChecking email: "
+                        + message.getSubject());
+
+                if (messageId == null)
+                    continue;
+
+                if (message.getHasAttachments() == null
+                        || !message.getHasAttachments()) {
+
+                    System.out.println("No attachments");
+
                     continue;
                 }
 
-                // 7. Fetch attachments
                 var attachments = graphClient
                         .me()
                         .messages()
@@ -108,46 +129,131 @@ public class GraphMailService {
                         .attachments()
                         .get();
 
-                if (attachments == null || attachments.getValue() == null) {
+                if (attachments == null
+                        || attachments.getValue() == null)
                     continue;
+
+                boolean resumeDownloaded = false;
+
+                // STEP 7: Download PDF attachments
+                for (Attachment attachment :
+                        attachments.getValue()) {
+
+                    if (!(attachment instanceof
+                            FileAttachment fileAttachment))
+                        continue;
+
+                    String fileName =
+                            fileAttachment.getName();
+
+                    System.out.println("Found attachment: "
+                            + fileName);
+
+                    if (fileName == null ||
+                            !fileName.toLowerCase()
+                                    .endsWith(".pdf")) {
+
+                        System.out.println("Skipping non-PDF");
+
+                        continue;
+                    }
+
+                    byte[] content =
+                            fileAttachment.getContentBytes();
+
+                    if (content == null) {
+
+                        System.out.println(
+                                "Content NULL, refetching...");
+
+                        Attachment full =
+                                graphClient
+                                        .me()
+                                        .messages()
+                                        .byMessageId(messageId)
+                                        .attachments()
+                                        .byAttachmentId(
+                                                attachment.getId())
+                                        .get();
+
+                        if (full instanceof
+                                FileAttachment fullFile) {
+
+                            content =
+                                    fullFile.getContentBytes();
+                        }
+                    }
+
+                    if (content == null) {
+
+                        System.out.println(
+                                "Failed to fetch content");
+
+                        continue;
+                    }
+
+                    // STEP 8: Save file
+                    File file =
+                            new File(folder, fileName);
+
+                    try (FileOutputStream fos =
+                                 new FileOutputStream(file)) {
+
+                        fos.write(content);
+
+                        fos.flush();
+                    }
+
+                    // STEP 9: Verify file saved
+                    if (file.exists()) {
+
+                        System.out.println(
+                                "SUCCESS: File saved");
+
+                        System.out.println(
+                                "Location: "
+                                        + file.getAbsolutePath());
+
+                        System.out.println(
+                                "Size: "
+                                        + file.length()
+                                        + " bytes");
+                    }
+                    else {
+
+                        System.out.println(
+                                "ERROR: File not saved");
+                    }
+
+                    // STEP 10: Process resume
+                    resumeProcessingService.process(file);
+
+                    resumeDownloaded = true;
                 }
 
-                // 8. Loop attachments
-                for (Attachment attachment : attachments.getValue()) {
+                // STEP 11: Mark email as READ
+                if (resumeDownloaded) {
 
-                    if (attachment instanceof FileAttachment fileAttachment) {
+                    Message update = new Message();
 
-                        String fileName = fileAttachment.getName();
+                    update.setIsRead(true);
 
-                        if (fileName == null) {
-                            continue;
-                        }
+                    graphClient
+                            .me()
+                            .messages()
+                            .byMessageId(messageId)
+                            .patch(update);
 
-                        // only PDF resumes
-                        if (!fileName.toLowerCase().endsWith(".pdf")) {
-                            continue;
-                        }
-
-                        byte[] content = fileAttachment.getContentBytes();
-
-                        if (content == null) {
-                            continue;
-                        }
-
-                        // 9. Save file
-                        File file = new File(folder, fileName);
-
-                        OutputStream os = new FileOutputStream(file);
-                        os.write(content);
-                        os.close();
-
-                        System.out.println("Downloaded resume: " + fileName);
-                        resumeProcessingService.process(file);
-                    }
+                    System.out.println(
+                            "Email marked as READ");
                 }
             }
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
+
+            System.out.println("ERROR:");
+
             e.printStackTrace();
         }
     }

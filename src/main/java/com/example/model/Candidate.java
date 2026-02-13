@@ -1,46 +1,55 @@
 package com.example.model;
 
-import jakarta.persistence.*;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.UUID;
 
-@Entity
-@Table(name = "candidates")
 @Data
 @NoArgsConstructor
+@DynamoDbBean
 public class Candidate {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
+    private String candidateId;
     private String fullName;
-    
-    @Column(nullable = false)
     private String email;
-
-    @Column(name = "resume_s3_key", nullable = false)
     private String resumeS3Key;
-
-    @Column(name = "resume_s3_bucket", nullable = false)
     private String resumeS3Bucket;
+    private String source;
+    private String status;
+    private String createdAt;
 
-    @Enumerated(EnumType.STRING)
-    private SourceType source;
-
-    @Enumerated(EnumType.STRING)
-    private CandidateStatus status;
-
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        if (this.status == null) this.status = CandidateStatus.RECEIVED;
+    // ---------- Primary Key ----------
+    @DynamoDbPartitionKey
+    public String getCandidateId() {
+        return candidateId;
     }
 
-    public enum SourceType { EMAIL, MANUAL, API }
-    public enum CandidateStatus { RECEIVED, PARSED, SHORTLISTED, REJECTED }
+    // ---------- GSI: email-index ----------
+    @DynamoDbSecondaryPartitionKey(indexNames = "email-index")
+    public String getEmail() {
+        return email;
+    }
+
+    public static Candidate create(
+            String fullName,
+            String email,
+            String bucket,
+            String key,
+            String source,
+            String status
+    ) {
+        Candidate c = new Candidate();
+        c.candidateId = UUID.randomUUID().toString();
+        c.fullName = fullName;
+        c.email = email;
+        c.resumeS3Bucket = bucket;
+        c.resumeS3Key = key;
+        c.source = source;
+        c.status = status;
+        c.createdAt = Instant.now().toString();
+        return c;
+    }
 }

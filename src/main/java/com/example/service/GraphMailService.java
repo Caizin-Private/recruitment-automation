@@ -24,9 +24,11 @@ import java.time.OffsetDateTime;
 public class GraphMailService {
 
     private final OAuth2AuthorizedClientService clientService;
+    private final ResumeProcessingService resumeProcessingService;
 
-    public GraphMailService(OAuth2AuthorizedClientService clientService) {
+    public GraphMailService(OAuth2AuthorizedClientService clientService,ResumeProcessingService resumeProcessingService) {
         this.clientService = clientService;
+        this.resumeProcessingService = resumeProcessingService;
     }
 
     public void fetchEmailsAndDownloadResumes(OAuth2AuthenticationToken authentication) {
@@ -140,6 +142,7 @@ public class GraphMailService {
                         os.close();
 
                         System.out.println("Downloaded resume: " + fileName);
+                        resumeProcessingService.process(file);
                     }
                 }
             }

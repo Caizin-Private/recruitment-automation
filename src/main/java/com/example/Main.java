@@ -1,23 +1,15 @@
 package com.example;
 
-import com.example.infrastructure.storage.S3StorageService;
-import com.example.infrastructure.storage.S3UploadResult;
-import com.example.model.Candidate;
-import com.example.repository.CandidateRepository;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
-
-import java.io.File;
 
 @SpringBootApplication
 @EnableScheduling
-public class RecruitmentAutomationApplication {
+public class Main {
 
     public static void main(String[] args) {
-        SpringApplication.run(RecruitmentAutomationApplication.class, args);
+        SpringApplication.run(Main.class, args);
     }
 
 //    @Bean

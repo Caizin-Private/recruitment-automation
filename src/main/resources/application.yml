@@ -9,9 +9,10 @@ spring:
             scope:
               - openid
               - profile
-              - email
-              - User.Read
+              - offline_access
+              - Mail.ReadWrite
               - Mail.Read
+              - User.Read
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/microsoft"
         provider:

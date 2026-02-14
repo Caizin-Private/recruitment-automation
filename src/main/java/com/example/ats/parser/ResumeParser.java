@@ -16,7 +16,6 @@ public class ResumeParser {
     private static final Pattern EXPERIENCE_PATTERN =
             Pattern.compile("(\\d+(\\.\\d+)?)\\s*(years|yrs)");
 
-    // Detect capitalized names like "John Smith"
     private static final Pattern NAME_PATTERN =
             Pattern.compile("^[A-Z][a-z]+(\\s+[A-Z][a-z]+){1,2}$");
 
@@ -28,6 +27,9 @@ public class ResumeParser {
 
     public ParsedResume parse(String text){
 
+        if(text == null || text.isBlank())
+            text = "";
+
         String email = extractEmail(text);
 
         String name = extractName(text, email);
@@ -38,8 +40,6 @@ public class ResumeParser {
 
         List<String> projects = extractProjects(text);
 
-        String education = extractEducation(text);
-
         int wordCount = text.split("\\s+").length;
 
         return new ParsedResume(
@@ -48,14 +48,9 @@ public class ResumeParser {
                 skills,
                 experience,
                 projects,
-                education,
                 wordCount
         );
     }
-
-    // ========================
-    // EMAIL EXTRACTION
-    // ========================
 
     private String extractEmail(String text){
 
@@ -66,19 +61,13 @@ public class ResumeParser {
                 : "unknown@email.com";
     }
 
-    // ========================
-    // PRODUCTION NAME EXTRACTION
-    // ========================
-
     private String extractName(String text, String email){
 
-        // Strategy 1: Extract from email
         String emailName = extractNameFromEmail(email);
 
-        if(emailName != null)
+        if(emailName != null && !emailName.isBlank())
             return emailName;
 
-        // Strategy 2: First valid resume line
         Optional<String> firstLine =
                 text.lines()
                         .map(String::trim)
@@ -88,7 +77,6 @@ public class ResumeParser {
         if(firstLine.isPresent())
             return firstLine.get();
 
-        // Strategy 3: Scan all lines for name pattern
         for(String line : text.split("\n")){
 
             line = line.trim();
@@ -107,19 +95,15 @@ public class ResumeParser {
 
         try{
 
-            String username =
-                    email.split("@")[0];
+            String username = email.split("@")[0];
 
-            username =
-                    username.replaceAll("[^a-zA-Z]", " ");
+            username = username.replaceAll("[^a-zA-Z]", " ");
 
-            String[] parts =
-                    username.split("\\s+");
+            String[] parts = username.split("\\s+");
 
             if(parts.length >= 2){
 
-                StringBuilder name =
-                        new StringBuilder();
+                StringBuilder name = new StringBuilder();
 
                 for(String part : parts){
 
@@ -162,10 +146,6 @@ public class ResumeParser {
         return true;
     }
 
-    // ========================
-    // SKILLS EXTRACTION
-    // ========================
-
     private List<String> extractSkills(String text){
 
         text = text.toLowerCase();
@@ -180,10 +160,6 @@ public class ResumeParser {
 
         return found;
     }
-
-    // ========================
-    // EXPERIENCE EXTRACTION
-    // ========================
 
     private double extractExperience(String text){
 
@@ -203,10 +179,6 @@ public class ResumeParser {
         return max;
     }
 
-    // ========================
-    // PROJECT EXTRACTION
-    // ========================
-
     private List<String> extractProjects(String text){
 
         List<String> projects =
@@ -219,25 +191,5 @@ public class ResumeParser {
                 .forEach(projects::add);
 
         return projects;
-    }
-
-    // ========================
-    // EDUCATION EXTRACTION
-    // ========================
-
-    private String extractEducation(String text){
-
-        for(String line : text.split("\n")){
-
-            line = line.toLowerCase();
-
-            if(line.contains("b.tech")
-                    || line.contains("m.tech")
-                    || line.contains("bachelor")
-                    || line.contains("master"))
-                return line;
-        }
-
-        return "UNKNOWN";
     }
 }

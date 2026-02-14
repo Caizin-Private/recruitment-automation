@@ -6,14 +6,9 @@ public record ParsedResume(
 
         String fullName,
         String email,
-
         List<String> skills,
-
         double yearsOfExperience,
-
         List<String> projects,
-
-        String education,
-
         int wordCount
+
 ) {}

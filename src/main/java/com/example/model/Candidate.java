@@ -20,18 +20,21 @@ public class Candidate {
     private String source;
     private String status;
     private String createdAt;
+    private Double atsScore;
 
-    // ---------- Primary Key ----------
+
+    // Partition Key
     @DynamoDbPartitionKey
     public String getCandidateId() {
         return candidateId;
     }
 
-    // ---------- GSI: email-index ----------
+    // GSI index
     @DynamoDbSecondaryPartitionKey(indexNames = "email-index")
     public String getEmail() {
         return email;
     }
+
 
     public static Candidate create(
             String fullName,
@@ -50,6 +53,7 @@ public class Candidate {
         c.source = source;
         c.status = status;
         c.createdAt = Instant.now().toString();
+        c.atsScore = null;
         return c;
     }
 }

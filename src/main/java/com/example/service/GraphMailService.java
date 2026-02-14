@@ -167,7 +167,21 @@ public class GraphMailService {
                         os.write(content);
 
                         // STEP 10: Process resume
-                        resumeProcessingService.process(tempFile);
+                        String senderEmail =
+                                message.getFrom()
+                                        .getEmailAddress()
+                                        .getAddress();
+
+                        String senderName =
+                                message.getFrom()
+                                        .getEmailAddress()
+                                        .getName();
+
+                        resumeProcessingService.process(
+                                tempFile,
+                                senderName,
+                                senderEmail
+                        );
                         success = true;
                         resumeDownloaded = true;
 

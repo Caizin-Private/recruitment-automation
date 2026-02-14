@@ -1,7 +1,6 @@
 package com.example.ats.scorer;
 
-import com.example.ats.model.ParsedResume;
-import com.example.ats.model.JDRequirements;
+import com.example.ats.model.*;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -10,20 +9,17 @@ public class ATSScoringService {
     private final SkillSimilarityScorer skill;
     private final ExperienceScorer experience;
     private final ProjectScorer project;
-    private final EducationScorer education;
     private final ResumeQualityScorer quality;
 
     public ATSScoringService(
             SkillSimilarityScorer skill,
             ExperienceScorer experience,
             ProjectScorer project,
-            EducationScorer education,
             ResumeQualityScorer quality){
 
         this.skill=skill;
         this.experience=experience;
         this.project=project;
-        this.education=education;
         this.quality=quality;
     }
 
@@ -34,7 +30,7 @@ public class ATSScoringService {
             JDRequirements jdReq){
 
         double skillScore =
-                skill.score(resumeText,jdText);
+                skill.score(resumeText, jdText);
 
         double experienceScore =
                 experience.score(
@@ -44,17 +40,18 @@ public class ATSScoringService {
         double projectScore =
                 project.score(parsed.projects());
 
-        double educationScore =
-                education.score(parsed.education());
-
         double qualityScore =
-                quality.score(parsed.wordCount());
+                quality.score(
+                        resumeText,
+                        parsed.skills(),
+                        parsed.yearsOfExperience(),
+                        parsed.projects()
+                );
 
         double finalScore =
-                0.40*skillScore +
-                        0.20*experienceScore +
-                        0.15*projectScore +
-                        0.15*educationScore +
+                0.45*skillScore +
+                        0.25*experienceScore +
+                        0.20*projectScore +
                         0.10*qualityScore;
 
         return Math.round(finalScore*100.0)/100.0;

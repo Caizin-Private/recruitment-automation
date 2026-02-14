@@ -30,3 +30,13 @@ aws:
     region: ap-south-1
     bucket: caizin-recruitment-resumes
     base-folder: resumes
+
+# OpenAI (key from environment; do not commit)
+openai:
+  api-key: ${OPENAI_API_KEY:}
+
+# Google Apps Script Web App URL (deploy as Web App, execute as me, who has access: anyone)
+google:
+  apps:
+    script:
+      url: ${GOOGLE_APPS_SCRIPT_URL:}

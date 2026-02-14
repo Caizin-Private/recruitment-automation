@@ -46,6 +46,8 @@ dependencies {
     implementation "software.amazon.awssdk:dynamodb"
     implementation "software.amazon.awssdk:dynamodb-enhanced"
     implementation "software.amazon.awssdk:auth"
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3'
+
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

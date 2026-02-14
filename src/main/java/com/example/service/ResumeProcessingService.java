@@ -1,5 +1,8 @@
 package com.example.service;
 
+import com.example.assessment.dto.AssessmentDto;
+import com.example.assessment.service.GoogleFormService;
+import com.example.assessment.service.LlmAssessmentService;
 import com.example.ats.extractor.JDTextExtractor;
 import com.example.ats.model.JDRequirements;
 import com.example.ats.model.ParsedResume;
@@ -12,12 +15,16 @@ import com.example.infrastructure.storage.S3UploadResult;
 import com.example.model.Candidate;
 import com.example.repository.CandidateDynamoRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 
 @Service
 public class ResumeProcessingService {
+
+    private static final Logger log = LoggerFactory.getLogger(ResumeProcessingService.class);
 
     private final ResumeTextExtractor extractor;
     private final ResumeParser resumeParser;
@@ -28,6 +35,9 @@ public class ResumeProcessingService {
     private final S3StorageService s3Service;
     private final CandidateDynamoRepository repository;
 
+    private final LlmAssessmentService llmAssessmentService;
+    private final GoogleFormService googleFormService;
+
     public ResumeProcessingService(
             ResumeTextExtractor extractor,
             ResumeParser resumeParser,
@@ -35,7 +45,9 @@ public class ResumeProcessingService {
             JDTextExtractor jdExtractor,
             ATSScoringService atsScoringService,
             S3StorageService s3Service,
-            CandidateDynamoRepository repository
+            CandidateDynamoRepository repository,
+            LlmAssessmentService llmAssessmentService,
+            GoogleFormService googleFormService
     ) {
         this.extractor = extractor;
         this.resumeParser = resumeParser;
@@ -44,6 +56,8 @@ public class ResumeProcessingService {
         this.atsScoringService = atsScoringService;
         this.s3Service = s3Service;
         this.repository = repository;
+        this.llmAssessmentService = llmAssessmentService;
+        this.googleFormService = googleFormService;
     }
 
     public void process(
@@ -78,10 +92,7 @@ public class ResumeProcessingService {
 
             // STEP 5: Check duplicate candidate
             if (repository.existsByEmail(email)) {
-
-                System.out.println(
-                        "Candidate already exists: " + email);
-
+                log.info("Candidate already exists: {}", email);
                 return;
             }
 
@@ -123,16 +134,21 @@ public class ResumeProcessingService {
             // STEP 12: Save to DynamoDB
             repository.save(candidate);
 
-            System.out.println(
-                    "Candidate saved successfully. ATS Score: "
-                            + atsScore);
+            log.info("Candidate saved successfully. ATS Score: {}", atsScore);
+
+//            // STEP 13: Generate assessment and create Google Form (log link only; do not send email)
+//            try {
+//                AssessmentDto assessment = llmAssessmentService.generateAssessment(resumeText);
+//                System.out.println(assessment);
+//                String formUrl = googleFormService.createForm(assessment);
+//                System.out.println("Generated Google Form URL: " + formUrl);
+//                log.info("Generated Assessment Form: {}", formUrl);
+//            } catch (Exception ex) {
+//                log.warn("Assessment/form creation skipped or failed: {}", ex.getMessage());
+//            }
 
         } catch (Exception e) {
-
-            System.err.println(
-                    "Error processing resume: " + e.getMessage());
-
-            e.printStackTrace();
+            log.error("Error processing resume: {}", e.getMessage(), e);
         }
     }
 }

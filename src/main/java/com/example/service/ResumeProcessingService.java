@@ -136,16 +136,16 @@ public class ResumeProcessingService {
 
             log.info("Candidate saved successfully. ATS Score: {}", atsScore);
 
-//            // STEP 13: Generate assessment and create Google Form (log link only; do not send email)
-//            try {
-//                AssessmentDto assessment = llmAssessmentService.generateAssessment(resumeText);
-//                System.out.println(assessment);
-//                String formUrl = googleFormService.createForm(assessment);
-//                System.out.println("Generated Google Form URL: " + formUrl);
-//                log.info("Generated Assessment Form: {}", formUrl);
-//            } catch (Exception ex) {
-//                log.warn("Assessment/form creation skipped or failed: {}", ex.getMessage());
-//            }
+            // STEP 13: Generate assessment and create Google Form (log link only; do not send email)
+            try {
+                AssessmentDto assessment = llmAssessmentService.generateAssessment(resumeText);
+                System.out.println(assessment);
+                String formUrl = googleFormService.createForm(assessment);
+                System.out.println("Generated Google Form URL: " + formUrl);
+                log.info("Generated Assessment Form: {}", formUrl);
+            } catch (Exception ex) {
+                log.warn("Assessment/form creation skipped or failed: {}", ex.getMessage());
+            }
 
         } catch (Exception e) {
             log.error("Error processing resume: {}", e.getMessage(), e);

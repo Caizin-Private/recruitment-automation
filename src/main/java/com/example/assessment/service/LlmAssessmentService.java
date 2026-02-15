@@ -2,6 +2,7 @@ package com.example.assessment.service;
 
 import com.example.ats.extractor.JDTextExtractor;
 import com.example.assessment.dto.AssessmentDto;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -53,25 +56,30 @@ public class LlmAssessmentService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(openaiApiKey);
 
+        // max_tokens needed so full assessment JSON (10 MCQs + 3 coding) is not truncated
         Map<String, Object> body = Map.of(
                 "model", MODEL,
                 "messages", List.of(Map.of("role", "user", "content", prompt)),
                 "response_format", Map.of("type", "json_object"),
-                "temperature", 0.3
+                "temperature", 0.3,
+                "max_tokens", 4096
         );
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
         try {
-            @SuppressWarnings("unchecked")
-            ResponseEntity<Map> response = restTemplate.postForEntity(OPENAI_CHAT_URL, request, Map.class);
-            Map<String, Object> responseBody = response.getBody();
-            if (responseBody == null) {
-                throw new IllegalStateException("OpenAI response body was null");
+            ResponseEntity<String> response = restTemplate.postForEntity(OPENAI_CHAT_URL, request, String.class);
+            String responseBody = response.getBody();
+            if (responseBody == null || responseBody.isBlank()) {
+                throw new IllegalStateException("OpenAI response body was null or empty");
             }
 
             String content = extractContentFromResponse(responseBody);
             return parseAssessmentJson(content);
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            String errorBody = e.getResponseBodyAsString();
+            log.error("OpenAI API error {}: {}", e.getStatusCode(), errorBody != null ? errorBody : e.getMessage());
+            throw new RuntimeException("OpenAI API error: " + (errorBody != null && !errorBody.isBlank() ? errorBody : e.getMessage()), e);
         } catch (RestClientException e) {
             log.error("OpenAI API call failed: {}", e.getMessage());
             throw new RuntimeException("Failed to generate assessment from OpenAI", e);
@@ -122,38 +130,52 @@ public class LlmAssessmentService {
             );
     }
 
-    @SuppressWarnings("unchecked")
-    private String extractContentFromResponse(Map<String, Object> responseBody) {
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
-        if (choices == null || choices.isEmpty()) {
-            throw new IllegalStateException("OpenAI response had no choices");
+    private String extractContentFromResponse(String responseBody) {
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode choices = root.path("choices");
+            if (choices.isEmpty() || !choices.isArray()) {
+                throw new IllegalStateException("OpenAI response had no choices");
+            }
+            JsonNode message = choices.get(0).path("message");
+            if (message.isMissingNode()) {
+                throw new IllegalStateException("OpenAI response message was null");
+            }
+            String content = message.path("content").asText(null);
+            if (content == null || content.isBlank()) {
+                throw new IllegalStateException("OpenAI response content was empty");
+            }
+            content = content.trim();
+            if (content.startsWith("```json")) {
+                content = content.substring(7).trim();
+            }
+            if (content.startsWith("```")) {
+                content = content.substring(3).trim();
+            }
+            if (content.endsWith("```")) {
+                content = content.substring(0, content.length() - 3).trim();
+            }
+            return content;
+        } catch (Exception e) {
+            if (e instanceof IllegalStateException) {
+                throw (IllegalStateException) e;
+            }
+            int len = responseBody != null ? responseBody.length() : 0;
+            String snippet = responseBody != null && responseBody.length() > 200
+                    ? responseBody.substring(0, 200) + "..."
+                    : responseBody;
+            log.error("Failed to parse OpenAI response (body length={}): {} - snippet: {}", len, e.getMessage(), snippet);
+            throw new RuntimeException("Failed to parse OpenAI response", e);
         }
-        Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-        if (message == null) {
-            throw new IllegalStateException("OpenAI response message was null");
-        }
-        String content = (String) message.get("content");
-        if (content == null || content.isBlank()) {
-            throw new IllegalStateException("OpenAI response content was empty");
-        }
-        content = content.trim();
-        if (content.startsWith("```json")) {
-            content = content.substring(7).trim();
-        }
-        if (content.startsWith("```")) {
-            content = content.substring(3).trim();
-        }
-        if (content.endsWith("```")) {
-            content = content.substring(0, content.length() - 3).trim();
-        }
-        return content;
     }
 
     private AssessmentDto parseAssessmentJson(String json) {
         try {
             return objectMapper.readValue(json, AssessmentDto.class);
         } catch (Exception e) {
-            log.error("Failed to parse assessment JSON: {}", e.getMessage());
+            int len = json != null ? json.length() : 0;
+            String snippet = json != null && json.length() > 100 ? json.substring(0, 100) + "..." : json;
+            log.error("Failed to parse assessment JSON (length={}): {} - snippet: {}", len, e.getMessage(), snippet);
             throw new RuntimeException("Failed to parse assessment response from OpenAI", e);
         }
     }

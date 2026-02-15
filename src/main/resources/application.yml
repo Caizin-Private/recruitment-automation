@@ -6,7 +6,6 @@ spring:
           microsoft:
             client-id: ${MICROSOFT_CLIENT_ID}
             client-secret: ${MICROSOFT_CLIENT_SECRET}
-            scope:
               - openid
               - profile
               - offline_access
@@ -34,7 +33,6 @@ aws:
 # OpenAI (key from environment; do not commit)
 openai:
   api-key: ${OPENAI_API_KEY:}
-
 # Google Apps Script Web App URL (deploy as Web App, execute as me, who has access: anyone)
 google:
   apps:

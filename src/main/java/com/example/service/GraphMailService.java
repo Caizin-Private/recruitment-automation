@@ -180,7 +180,8 @@ public class GraphMailService {
                         resumeProcessingService.process(
                                 tempFile,
                                 senderName,
-                                senderEmail
+                                senderEmail,
+                                authentication
                         );
                         success = true;
                         resumeDownloaded = true;

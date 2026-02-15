@@ -12,6 +12,7 @@ spring:
               - offline_access
               - Mail.ReadWrite
               - Mail.Read
+              - Mail.Send
               - User.Read
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/microsoft"
@@ -39,3 +40,11 @@ google:
   apps:
     script:
       url: ${GOOGLE_APPS_SCRIPT_URL:}
+# Recruitment: ATS score threshold above which assessment is sent (default 60)
+recruitment:
+  ats:
+    threshold: ${ATS_THRESHOLD:60}
+  assessment:
+    email:
+      subject: ${ASSESSMENT_EMAIL_SUBJECT:Complete your assessment}
+      from-name: ${ASSESSMENT_EMAIL_FROM_NAME:Recruitment Team}

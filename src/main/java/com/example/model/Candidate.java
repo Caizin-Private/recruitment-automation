@@ -21,6 +21,7 @@ public class Candidate {
     private String status;
     private String createdAt;
     private Double atsScore;
+    private String formUrl;
 
 
     // Partition Key

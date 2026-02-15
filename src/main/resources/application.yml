@@ -6,6 +6,7 @@ spring:
           microsoft:
             client-id: ${MICROSOFT_CLIENT_ID}
             client-secret: ${MICROSOFT_CLIENT_SECRET}
+            scope:
               - openid
               - profile
               - offline_access
